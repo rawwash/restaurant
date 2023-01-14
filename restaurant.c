@@ -1,193 +1,128 @@
-#include "lab3.h"
- 
-//Add TA party item request to the list
-int add_request(struct party_node **head, char *item, double price, char *ta){
-  
-   if (strcmp(item, "IDE") == 0){
-     return -1;
-   } 
-  
-     //allocate memory for dynamic types
-     struct party_node *request = (struct party_node*) malloc (sizeof(struct party_node));
- 
-     request->item = (char *) malloc (sizeof(char)*(strlen(item) + 1));
-     request->ta = (char *) malloc (sizeof(char)*(strlen(ta) + 1));
- 
-     strcpy(request->ta, ta);
-     strcpy(request->item, item);
-     request->price = price;
- 
-     //keep track of node before switching
-     request->next = *head;
- 
-     //point head to new request node (LIFO)
-     *head = request;
- 
-     return 0;
- 
-  
-}
- 
-//Remove the last item added
-void remove_request(struct party_node **head){
-  
-   //keep track of head node in dummy ptr
-   if ((*head) == NULL){
-     return;
-   }
-  
-   struct party_node *dummy = *head;
- 
-   //point head to next node
-   *head = dummy->next;
-   
-   free(dummy->ta);
-   free(dummy->item);
-   free(dummy);
- 
-}
- 
-//Sort party item requests - in place?
-void make_sorted(struct party_node **head){
-  struct party_node *unsorted = *head;
- struct party_node *sorted = NULL;
- 
- int length = 1;
-  //find length of linked list
- while (unsorted->next != NULL) {
-   length++;
-   unsorted = unsorted -> next;
- }
-  //declaring min and other elements
- double min = unsorted->price;
- char* temp_item = unsorted->item;
- char* temp_ta = unsorted->ta;
- // free(unsorted->item)
- 
- unsorted = *head;
- 
- for(int i = 0; i < length; i++) {
- 
-   unsorted = *head;
- 
-   //printf("%f\n\n\n", unsorted->price);
-   //finding min for this iteration
-   //here there was a next
-   while (unsorted != NULL){
-     if (unsorted->price < min) {
-       min = unsorted->price;
-       temp_item = unsorted->item;
-       temp_ta = unsorted->ta;
-     }
-     unsorted = unsorted->next;
-   }
- 
-   //printf("%f\n\n\n", min);
-  
-   add_request(&sorted, temp_item, min, temp_ta);
-  
-   unsorted = *head;
- 
-   while(unsorted->next != NULL){
-     if(unsorted == *head && (*head)->price == min){
-         *head = unsorted->next;
-       }
-    
-     else if(unsorted->next->price == min){
-         unsorted->next = unsorted->next->next;
-     }
- 
-     else {
-       unsorted = unsorted->next;
-     }
-      
-   }
-    
-   //print_list(*head);
-   //print_list(sorted);
- 
-   min = 9999999;
-  }
- //SORTING works, now we
- 
-//need to pass it to head
- //keep track of node before switching
- unsorted->next = *head;
- 
- //point head to sorted
- *head = sorted;
+#include "a1.h"
+#define CLOSING_OPTION 3
 
-  free(unsorted->item);
-  free(unsorted->ta);
-  free(unsorted);
-}
+int main(){
+	char* restaurant_name = "Tim Bortons";
+	int choice = -1;
+	
+	int num_pending_orders;
+	int num_completed_orders;
+	
+	// just ... dont enter too many items....
+	char str_input1[100];
+	char str_input2[100];
+	memset(str_input1, '\0', sizeof(char) * 100);
+	memset(str_input2, '\0', sizeof(char) * 100);
+	
+	fprintf(stdout, "Welcome to %s!\n", restaurant_name);
+	
+	char* options_str = "Options:\n"
+	"\t (%d) Take an order\n"
+	"\t (%d) Process an order\n"
+	"\t (%d) Close the restaurant\n"
+	">>> ";
+	
+	Restaurant* restaurant = initialize_restaurant(restaurant_name);
+	
+	while (choice != CLOSING_OPTION){
+		fprintf(stdout, options_str, 1, 2, 3);
+		fscanf(stdin, "%d", &choice);
+		
+		switch (choice){
+			case 1:
+				fprintf(stdout, 
+					"----------------------------------------------\n"
+					"|           STARTING TAKE AN ORDER           |\n"
+					"----------------------------------------------\n"
+				);
+				num_pending_orders = get_num_pending_orders(restaurant);
+				num_completed_orders = get_num_completed_orders(restaurant);
+				fprintf(stdout, "Number of completed orders: %d\nNumber of pending orders: %d\n",
+					num_completed_orders, num_pending_orders);
+				
+				print_menu(restaurant->menu);
+				
+				fprintf(stdout, "Enter a sequence of %d-digit item codes: ", ITEM_CODE_LENGTH - 1);
+				fscanf(stdin, "%s", str_input1); // it's not a string literal here, haha
+		
+				fprintf(stdout, "Enter  '%s'-delimited integer quantities of each item: ", MENU_DELIM);
+				fscanf(stdin, "%s", str_input2);	
+				
+				Order *new_order = build_order(str_input1, str_input2);
+				enqueue_order(new_order, restaurant);
+				
+				fprintf(stdout, "Order taken: \n");
+				print_order(new_order);
+				
+				num_pending_orders = get_num_pending_orders(restaurant);
+				num_completed_orders = get_num_completed_orders(restaurant);
+				fprintf(stdout, "Number of completed orders: %d\nNumber of pending orders: %d\n",
+					num_completed_orders, num_pending_orders);
+				fprintf(stdout, 
+					"----------------------------------------------\n"
+					"|          COMPLETED TAKE AN ORDER           |\n"
+					"----------------------------------------------\n"
+				);
+				break;
+			case 2:
+				fprintf(stdout, 
+					"----------------------------------------------\n"
+					"|          STARTING PROCESS AN ORDER         |\n"
+					"----------------------------------------------\n"
+				);
+				fprintf(stdout, "----------- STARTING PROCESS AN ORDER -----------");
+				num_pending_orders = get_num_pending_orders(restaurant);
+				num_completed_orders = get_num_completed_orders(restaurant);
+				fprintf(stdout, "Number of completed orders: %d\nNumber of pending orders: %d\n",
+					num_completed_orders, num_pending_orders);
+				
+				if (num_pending_orders != 0){
+					Order* dequeued_order = dequeue_order(restaurant);
+					fprintf(stdout, "Now processing order...\n");
+					print_receipt(dequeued_order, restaurant->menu);
+					clear_order(&dequeued_order);
+				
+					num_pending_orders = get_num_pending_orders(restaurant);
+					num_completed_orders = get_num_completed_orders(restaurant);
+					fprintf(stdout, "Number of completed orders: %d\nNumber of pending orders: %d\n",
+					num_completed_orders, num_pending_orders);
+					
+				} else {
+					fprintf(stdout, "No pending orders available for processing...\n");
+				}
+
+					
+				fprintf(stdout, 
+					"----------------------------------------------\n"
+					"|         COMPLETED PROCESS AN ORDER         |\n"
+					"----------------------------------------------\n"
+				);
+				break;
+			case 3:
+				fprintf(stdout, 
+					"----------------------------------------------\n"
+					"|          STARTING CLOSE RESTAURANT         |\n"
+					"----------------------------------------------\n"
+				);
+				close_restaurant(&restaurant);
+				fprintf(stdout, "Thank you for coming to %s. Goodbye...\n", restaurant_name);
+				fprintf(stdout, 
+					"----------------------------------------------\n"
+					"|         COMPLETED CLOSE RESTAURANT         |\n"
+					"----------------------------------------------\n"
+				);
+				break;
+			default:
+				fprintf(stdout, 
+					"----------------------------------------------\n"
+					"|              ?!!!! ERROR !!!!?             |\n"
+					"----------------------------------------------\n"
+				);
+				fprintf(stdout, "Your entry (%d) is not a valid option...\nEnter a valid numeric option\n", choice);
+		}
+		
+	}
 
 
-//Trim list to fit the budget
-double finalize_list(struct party_node **head, double budget){
-  //Add code here
-  struct party_node* curr = *head;
-  struct party_node* prev = *head;
-  struct party_node* temp = NULL;
-
-   while(curr!=NULL && budget >0){
-      
-      if(curr==(*head) && ((curr->price) > budget)) {
-      *head = (*head)->next;
-      remove_request(&prev);
-      curr = *head;
-      prev = *head;
-      }
-      
-      curr = curr->next;
-      
-     
-     }
-    
-   curr = *head; 
-
-   while(curr!=NULL && budget>0){
-     
-     
-     if (curr->price <= budget){
-       budget = budget-(curr->price);
-       prev = curr;
-       temp = NULL;
-     }
-     
-    else{
-       temp = curr;
-       prev->next = curr->next;
-    }
-    
-     curr = curr->next;
-     
-     if (temp!= NULL && budget > 0) {
-      if (temp->price > budget){
-        remove_request(&temp);
-      }
-     }
-    temp = NULL;
-     
-   }
-      
-   
- 
-   return budget;
-
-   
-}
-
-//Print the current list - hope this is helpful!
-void print_list(struct party_node *head){
-    int count = 1;
-    printf("The current list contains:\n");
-    while(head!=NULL){
-        printf("Item %d: %s, %.2lf, requested by %s\n",
-            count, head->item, head->price, head->ta);
-        count++;
-        head = head->next;
-    }
-    printf("\n\n");
-    return;
+	return 0;
 }
